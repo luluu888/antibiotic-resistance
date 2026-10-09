@@ -1,3 +1,0 @@
-biobython
-matplotlib
-pandas
