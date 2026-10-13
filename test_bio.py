@@ -11,3 +11,5 @@ print(f"Reverse Complement: {my_seq.reverse_complement()}")
 
 stream = Entrez.efetch(db="nucleotide", id="EU490707", rettype="gb", retmode="text")
 print(stream.read())
+
+

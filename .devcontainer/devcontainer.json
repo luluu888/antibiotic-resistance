@@ -12,7 +12,7 @@
 			]
 		}
 	},
-	"postCreateCommand": "pip3 install --user biopython && pip3 install --user pandas && pip3 install --user matplotlib"
+	"postCreateCommand": "pip3 install --user biopython && pip3 install --user pandas && pip3 install --user matplotlib && pip3 install --user argNorm"
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
 
