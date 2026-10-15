@@ -1,0 +1,4 @@
+Gene_ID,Length_bp,GC_Content_%,ARO_ID,ARO_Name,Resistant_Drugs,Drug_Classes
+sul1,57,59.65,ARO:Unknown,Unmapped,None,None
+sul2,57,57.89,ARO:Unknown,Unmapped,None,None
+blaTEM-1,54,55.56,ARO:Unknown,Unmapped,None,None
