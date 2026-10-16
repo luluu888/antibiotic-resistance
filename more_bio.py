@@ -5,29 +5,22 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import pandas as pd
 
-# Import argnorm mapping and drug functions
+
 from argnorm.lib import map_to_aro
 from argnorm.drug_categorization import confers_resistance_to, drugs_to_drug_classes
 
 def create_sample_fasta():
-    """
-    Creates a temporary FASTA file with real antibiotic resistance gene sequences.
-    """
+
     records = [
         SeqRecord(
             Seq("ATGAAAACCCTGATCGCGGCAGCGGTTTTACTGTCGCTGTGCAGCGCGCAAAGCGCG"),
-            id="sul1",
-            description="sul1 sulfonamide resistance gene from ResFinder"
+            id="sul1_2_U12338",  
+            description="sul1 sulfonamide resistance gene"
         ),
         SeqRecord(
             Seq("ATGAAATCCAACATCAAGATCGGCATCGTGGGCATGCCGGACGCCGGCAAGTCGACG"),
-            id="sul2",
-            description="sul2 sulfonamide resistance gene from ResFinder"
-        ),
-        SeqRecord(
-            Seq("ATGACCAACTTAAATCCCGATCAGATCGCGGTCATCATCGGCATGGCGACCCGC"),
-            id="blaTEM-1",
-            description="blaTEM-1 beta-lactamase gene from ResFinder"
+            id="sul2_1_AF542061",  
+            description="sul2 sulfonamide resistance gene"
         )
     ]
     
@@ -38,9 +31,7 @@ def create_sample_fasta():
 
 
 def parse_fasta_with_biopython(fasta_file):
-    """
-    Parses full-length FASTA sequences using Biopython and extracts sequence metadata.
-    """
+
     parsed_genes = []
     
     for record in SeqIO.parse(fasta_file, "fasta"):
@@ -55,34 +46,32 @@ def parse_fasta_with_biopython(fasta_file):
 
 
 def normalize_with_argnorm(gene_df, database_name='resfinder'):
-    """
-    Maps gene IDs to ARO terms using argnorm and retrieves associated drugs/classes.
-    """
+   
     normalized_records = []
 
     for _, row in gene_df.iterrows():
         gene_id = row['Gene_ID']
+        aro_output = "ARO:Unknown"
+        aro_name = "Unmapped"
+        specific_drugs = []
+        broad_classes = []
         
-        # 1. Map gene symbol/ID to CARD ARO term using argnorm
         try:
+            # 1. Map full database identifier to CARD ARO term object
             aro_term = map_to_aro(gene=gene_id, database=database_name)
+            
+            if aro_term:
+                aro_output = aro_term.id if hasattr(aro_term, 'id') else str(aro_term)
+                aro_name = aro_term.name if hasattr(aro_term, 'name') else "Mapped"
+                
+                # 2. Get specific resistant drugs
+                specific_drugs = confers_resistance_to(aro_output)
+                
+                # 3. Map specific drugs to high-level therapeutic drug classes
+                broad_classes = drugs_to_drug_classes(specific_drugs)
+                
         except Exception:
-            aro_term = None
-        
-        if aro_term:
-            aro_output = aro_term.id if hasattr(aro_term, 'id') else str(aro_term)
-            aro_name = aro_term.name if hasattr(aro_term, 'name') else "Mapped"
-            
-            # 2. Pass the string ID to confers_resistance_to
-            specific_drugs = confers_resistance_to(aro_output)
-            
-            # 3. Map specific drugs to high-level therapeutic drug classes
-            broad_classes = drugs_to_drug_classes(specific_drugs)
-        else:
-            aro_output = "ARO:Unknown"
-            aro_name = "Unmapped"
-            specific_drugs = []
-            broad_classes = []
+            pass
 
         normalized_records.append({
             "Gene_ID": gene_id,
@@ -99,23 +88,27 @@ def normalize_with_argnorm(gene_df, database_name='resfinder'):
 
 def main():
     fasta_path = create_sample_fasta()
-    print(f"[*] Generated real FASTA sequence file at: {fasta_path}\n")
+    print(f"[*] Generated FASTA sequence file at: {fasta_path}\n")
 
     try:
+       
         gene_dataframe = parse_fasta_with_biopython(fasta_path)
         print("--- Step 1: Biopython FASTA Parsing Results ---")
         print(gene_dataframe[["Gene_ID", "Length_bp", "GC_Content_%"]].to_string(index=False))
         print("\n")
 
+       
         results_df = normalize_with_argnorm(gene_dataframe, database_name='resfinder')
         print("--- Step 2: argnorm ARO Normalization & Drug Categorization ---")
         print(results_df[["Gene_ID", "ARO_ID", "Resistant_Drugs", "Drug_Classes"]].to_string(index=False))
 
+        # Step 3: Export results to CSV
         output_csv = "arg_prediction_results.csv"
         results_df.to_csv(output_csv, index=False)
         print(f"\n[*] Execution finished successfully! Data exported to: {output_csv}")
 
     finally:
+        # Clean up temporary file
         if os.path.exists(fasta_path):
             os.remove(fasta_path)
 
